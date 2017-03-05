@@ -15,7 +15,7 @@ using namespace std;
 
 // Constants
 #define PI 3.14159265
- //hello this is a change
+
 Mat src; Mat src_gray; Mat drawing; Mat path_drawing;
 int thresh = 100;
 int max_thresh = 255;
@@ -132,17 +132,17 @@ void onMouse2(int evt, int x, int y, int flags, void* param) {
 */
 void thresh_callback(int, void*)
 {
-	Mat canny_output;
+	Mat canny_output=Mat::zeros(src.size(), CV_8UC3);
 	//vector<vector<Point> > contours2 = contours;
 	vector<Vec4i> hierarchy;
 	cout << "path start1: " << path_start << endl;
 	/// Detect edges using canny
 	Canny(src_gray, canny_output, thresh, thresh * 2, 3);
-	/*
+	
 	/// Show in a window
 	namedWindow("Canny", WINDOW_AUTOSIZE);
 	imshow("Canny", canny_output);
-	*/
+	
 	/// Find contours
 	findContours(canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
@@ -151,7 +151,7 @@ void thresh_callback(int, void*)
 	/// Draw contours
 	drawing = Mat::zeros(src.size(), CV_8UC3);
 
-
+	// find the main path
 	for (unsigned short i = 0; i < contours.size(); i++)
 	{
 		double area = contourArea((contours[i]), false);  //  Find the area of contour
@@ -162,13 +162,33 @@ void thresh_callback(int, void*)
 		}
 	}
 
+	// find the holes
+	vector<Vec3f> circles;
+
+	/// Apply the Hough Transform to find the circles
+	HoughCircles(src_gray, circles, CV_HOUGH_GRADIENT, 1, 5, thresh/3, thresh/3, 10, 16);
+
+	/// Draw the circles detected
+	for (size_t i = 0; i < circles.size(); i++)
+	{
+		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+		int radius = cvRound(circles[i][2]);
+		// circle center
+		circle(drawing, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+		// circle outline
+		circle(drawing, center, radius, Scalar(0, 0, 255), 3, 8, 0);
+	}
+
+
+
 	//printf("size of path : %i \n", contours[ball_path].size());
 
 	Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 	drawContours(drawing, contours, ball_path, color, 1, 8, hierarchy, 0, Point());
 	/// Show in a window
 	imshow("Contours", drawing);
-
+	//waitKey(10);
+	
 	
 }
 
