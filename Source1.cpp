@@ -40,6 +40,7 @@ void find_nearest_point(int, void*);
 void update_angle(int, void*);
 void onMouse2(int evt, int x, int y, int flags, void* param);
 void adjust_path();
+void find_walls();
 /**
 * @function main
 */
@@ -55,6 +56,7 @@ int main(int, char** argv)
 
 	/// Convert image to gray and blur it
 	cvtColor(src, src_gray, COLOR_BGR2GRAY);
+	find_walls();
 	blur(src_gray, src_gray, Size(3, 3));
 
 	/// Create Window
@@ -370,4 +372,66 @@ void adjust_path()
 	//namedWindow("Contours", WINDOW_AUTOSIZE);
 	imshow("Contours", path_drawing);
 	waitKey(10);
+}
+
+void find_walls()
+{
+	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
+	resizeWindow("Control", 600, 600);
+
+	int iLowH = 0;
+	int iHighH = 179;
+
+	int iLowS = 0;
+	int iHighS = 255;
+
+	int iLowV = 0;
+	int iHighV = 255;
+
+	int iMorf = 5;
+
+	//Create trackbars in "Control" window
+	cvCreateTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
+	cvCreateTrackbar("HighH", "Control", &iHighH, 179);
+
+	cvCreateTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
+	cvCreateTrackbar("HighS", "Control", &iHighS, 255);
+
+	cvCreateTrackbar("LowV", "Control", &iLowV, 255); //Value (0 - 255)
+	cvCreateTrackbar("HighV", "Control", &iHighV, 255);
+	
+	cvCreateTrackbar("Morf", "Control", &iMorf, 10); //Value (0 - 10)
+
+	while (true)
+	{
+
+		Mat imgHSV;
+
+		cvtColor(src, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+
+		Mat imgThresholded;
+
+		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
+
+																									  //morphological opening (remove small objects from the foreground)
+		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(iMorf, iMorf)));
+		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(iMorf, iMorf)));
+
+		//morphological closing (fill small holes in the foreground)
+		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(iMorf, iMorf)));
+		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(iMorf, iMorf)));
+
+		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		imshow("Original", src); //show the original image
+
+		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+		{
+			cout << "esc key is pressed by user" << endl;
+			break;
+		}
+	}
+
+	/// Show in a window
+	//namedWindow("Canny", WINDOW_AUTOSIZE);
+	//imshow("Canny", canny_output);
 }
