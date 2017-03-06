@@ -23,11 +23,13 @@ RNG rng(12345);
 Point current_point = Point(0, 0);
 vector<vector<Point> > contours;
 vector<Point> path;
+vector<Vec3f> circles;
 unsigned short ball_path = 0;
 unsigned short path_start = 0;
 unsigned short path_finish = 0;
 int path_angle = 50;
 int max_angle = 200;
+int min_dist_to_hole = 30;
 
 
 /// Function header
@@ -37,6 +39,7 @@ void get_path(int, void*);
 void find_nearest_point(int, void*);
 void update_angle(int, void*);
 void onMouse2(int evt, int x, int y, int flags, void* param);
+void adjust_path();
 /**
 * @function main
 */
@@ -108,7 +111,6 @@ int main(int, char** argv)
 	//update_angle(0, 0);
 	setMouseCallback("Contours", onMouse2, &path_angle);
 	get_path(0, 0);
-	
 	waitKey(0);
 	return(0);
 }
@@ -163,8 +165,7 @@ void thresh_callback(int, void*)
 	}
 
 	// find the holes
-	vector<Vec3f> circles;
-
+	circles.clear();
 	/// Apply the Hough Transform to find the circles
 	HoughCircles(src_gray, circles, CV_HOUGH_GRADIENT, 1, 5, thresh/3, thresh/3, 10, 16);
 
@@ -300,6 +301,72 @@ void get_path(int, void*) {
 	//namedWindow("Contours", WINDOW_AUTOSIZE);
 	imshow("Contours", path_drawing);
 	waitKey(10);
+	adjust_path();
 }
 
 void update_angle(int, void*) {}
+
+void adjust_path() 
+{
+	bool moved = false;
+	drawing.copyTo(path_drawing);
+	check_again:
+	moved = false;
+	for (int i = 0; i < path.size(); i++) 
+	{
+		for (int j = 0; j < circles.size(); j++)
+		{
+			Point center(cvRound(circles[j][0]), cvRound(circles[j][1]));
+			// find h
+			printf("for loop: %i ", j);
+			double hyp = sqrt(pow((path[i].y - circles[j][1]), 2) + pow((path[i].x - circles[j][0]), 2));
+			printf("hyp: %f ", hyp);
+			// if the distance to the hole is bigger than threshold skip
+			if (hyp > min_dist_to_hole)
+				continue;
+			double xmultiplier = (path[i].x - circles[j][0]) / hyp;
+			printf("xmultiplier: %f ", xmultiplier);
+			double ymultiplier = (path[i].y - circles[j][1]) / hyp;
+			printf("ymultiplier: %f ", ymultiplier);
+			// extend the line until the distance to the hole is larger than 
+			int k = 0;
+			double dist_temp = 0;
+			while (true) 
+			{
+				printf("while loop: %i \n", k);
+				dist_temp = sqrt(pow(((path[i].y + k*ymultiplier) - circles[j][1]), 2) + pow(((path[i].x + k*xmultiplier) - circles[j][0]), 2));
+				printf("dist: %i ", dist_temp);
+				if (dist_temp > min_dist_to_hole)
+				{
+					printf("break \n");
+					path[i] = Point(path[i].x + k*xmultiplier, path[i].y + k*ymultiplier);
+					moved = true;
+					break;
+				}
+				k++;
+			}
+		}
+	}
+	// if a point has been moved we need to check that its not moved over to another hole
+	if (moved) goto check_again;
+
+	// print the circles
+	Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+	for (unsigned short i = 0; i < path.size(); i++)
+	{
+		circle(path_drawing, path[i], 5, color, 2, 8, 0);
+		imshow("Contours", path_drawing);
+		waitKey(10);
+		
+	}
+
+
+	for (int i = 1; i < path.size(); i++) {
+		arrowedLine(path_drawing, path[i - 1], path[i], Scalar(255, 0, 0), 1, 8, 0, 0.5);
+	}
+
+	/// Show in a window
+	//namedWindow("Contours", WINDOW_AUTOSIZE);
+	imshow("Contours", path_drawing);
+	waitKey(10);
+}
