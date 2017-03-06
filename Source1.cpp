@@ -361,7 +361,8 @@ void adjust_path()
 	}
 
 
-	for (int i = 1; i < path.size(); i++) {
+	for (int i = 1; i < path.size(); i++) 
+	{
 		arrowedLine(path_drawing, path[i - 1], path[i], Scalar(255, 0, 0), 1, 8, 0, 0.5);
 	}
 
