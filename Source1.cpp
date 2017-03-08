@@ -47,7 +47,7 @@ void find_walls();
 int main(int, char** argv)
 {
 	/// Load source image
-	src = imread("wooden-labyrinth-maze.jpg", IMREAD_COLOR);
+	src = imread("labyrinthActual.jpg", IMREAD_COLOR);
 	if (src.empty())
 	{
 		cerr << "No image supplied ..." << endl;
@@ -56,6 +56,7 @@ int main(int, char** argv)
 
 	/// Convert image to gray and blur it
 	cvtColor(src, src_gray, COLOR_BGR2GRAY);
+	
 	find_walls();
 	blur(src_gray, src_gray, Size(3, 3));
 
@@ -380,13 +381,13 @@ void find_walls()
 	resizeWindow("Control", 600, 600);
 
 	int iLowH = 0;
-	int iHighH = 179;
+	int iHighH = 21;
 
-	int iLowS = 0;
-	int iHighS = 255;
+	int iLowS = 39;
+	int iHighS = 141;
 
-	int iLowV = 0;
-	int iHighV = 255;
+	int iLowV = 158;
+	int iHighV = 217;
 
 	int iMorf = 5;
 
@@ -411,9 +412,10 @@ void find_walls()
 
 		Mat imgThresholded;
 
+		//imgHSV.convertTo(imgThresholded, );
 		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
 
-																									  //morphological opening (remove small objects from the foreground)
+		//morphological opening (remove small objects from the foreground)
 		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(iMorf, iMorf)));
 		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(iMorf, iMorf)));
 
